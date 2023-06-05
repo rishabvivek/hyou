@@ -8,10 +8,10 @@ import json
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.cluster import KMeans
 import numpy as np
+import csv
 
 dotenv.load_dotenv()
 
-# Get your client ID and client secret from the Spotify Developer Dashboard
 client_id = os.getenv("SPOTIFY_CLIENT")
 client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
 
@@ -33,7 +33,6 @@ data = {"grant_type": "client_credentials"}
 # Send the authentication request
 response = requests.post(url, headers=headers, data=data)
 
-# Check if the request was successful (status code 200)
 if response.status_code == 200:
     json_res = response.json()
     access_token = json_res["access_token"]
@@ -48,11 +47,9 @@ if response.status_code == 200:
     track_names = []
     tracks_data = []
 
-    # Make the initial API request to retrieve the first set of tracks
     playlist_url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks"
     playlist_response = requests.get(playlist_url, headers=api_headers)
 
-    # Check if the request was successful (status code 200)
     if playlist_response.status_code == 200:
         playlist_info = playlist_response.json()
         tracks = playlist_info.get("items", [])
@@ -61,7 +58,7 @@ if response.status_code == 200:
         for track in tracks:
             track_names.append(track["track"]["name"])
 
-        # Paginate through the tracks until all names are retrieved
+        # Get all tracks until all names are retrieved
         while "next" in playlist_info and playlist_info["next"]:
             playlist_url = playlist_info["next"]
             playlist_response = requests.get(playlist_url, headers=api_headers)
@@ -116,7 +113,7 @@ if response.status_code == 200:
         # Process audio features data
         for i, feature in enumerate(audio_features):
             track_name = track_names[i]
-            # Access different audio features for each track
+            
             acousticness = feature["acousticness"]
             danceability = feature["danceability"]
             energy = feature["energy"]
@@ -124,7 +121,7 @@ if response.status_code == 200:
             loudness = feature["loudness"]
             tempo = feature["tempo"]
             valence = feature["valence"]
-            # ... and other features
+            
 
             track_data = {
                 "track_name": track_name,
@@ -135,47 +132,35 @@ if response.status_code == 200:
                 "loudness": loudness,
                 "tempo": tempo,
                 "valence": valence,
-                # ... and other features
             }
             tracks_data.append(track_data)
 
         numerical_features = ["acousticness", "danceability", "tempo", "instrumentalness", "energy", "loudness", "valence"]
         data = [[track_data[feature] for feature in numerical_features] for track_data in tracks_data]
-        
+
+        # Normalizing data 
         scaler = MinMaxScaler()
         normalized_data = scaler.fit_transform(data)
         for i, track_data in enumerate(tracks_data):
             for j, feature in enumerate(numerical_features):
                 track_data[feature] = normalized_data[i][j]
+
         
 
-        X = np.array([[track_data[feature] for feature in numerical_features] for track_data in tracks_data])
+        # Save data to CSV file
+        filename = "tracks_data.csv"
+        fieldnames = tracks_data[0].keys()
+        # Write data to CSV file
+        with open(filename, mode="w", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            for track_data in tracks_data:
+                writer.writerow(track_data)
 
-        # Define the number of clusters (emotions)
-        num_clusters = 5
-
-        emotion_labels = {
-            0: "Happy",
-            1: "Sad",
-            2: "Energetic",
-            3: "Love",
-            4: "Calm"
-        }
-
-        # Apply K-means clustering
-        kmeans = KMeans(n_clusters=num_clusters, random_state=42)
-        cluster_labels = kmeans.fit_predict(X)
-
-        # Print the cluster labels for each song
-        for i, track_name in enumerate(track_names):
-            cluster_label = cluster_labels[i]
-            emotion = emotion_labels.get(cluster_label, "Unknown")
-            print(f"{track_name}: Cluster {cluster_label} -     {emotion}")
+        print(f"Data saved to {filename}")
         
-
     else:
         print(f"Error: {playlist_response.status_code} - {playlist_response.text}")
 
-# Print the response status code and error message if the request was not successful
 else:
     print(f"Error: {response.status_code} - {response.text}")
