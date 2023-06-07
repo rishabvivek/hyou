@@ -10,7 +10,6 @@ import torch.nn as nn
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import KFold
 from sklearn.metrics import precision_score, recall_score, f1_score
-
 import numpy as np
 import csv
 import lyricsgenius
@@ -230,30 +229,27 @@ filename = "tracks_lyrics.csv"
 
 
 
-test_data = pd.read_csv('test_set.csv')
 train_data = pd.read_csv('training_set.csv')
 
 X_train = train_data.drop(['track_name', 'happiness', 'sadness', 'love', 'calm', 'energetic'], axis=1)
 y_train = train_data[['happiness', 'sadness', 'love', 'calm', 'energetic']]
 
-# Split the test set into features and target emotions
-X_test = test_data.drop(['track_name', 'happiness', 'sadness', 'love', 'calm', 'energetic'], axis=1)
-y_test = test_data[['happiness', 'sadness', 'love', 'calm', 'energetic']]
 
 X_train_tensor = torch.tensor(X_train.values, dtype=torch.float32)
 y_train_tensor = torch.tensor(y_train.values, dtype=torch.float32)
-X_test_tensor = torch.tensor(X_test.values, dtype=torch.float32)
-y_test_tensor = torch.tensor(y_test.values, dtype=torch.float32)
+
 class MultiLabelClassifier(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(MultiLabelClassifier, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
+        self.dropout = nn.Dropout(0.1) 
         self.relu = nn.ReLU()
         self.fc2 = nn.Linear(hidden_size, output_size)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         out = self.fc1(x)
+        out = self.dropout(out)
         out = self.relu(out)
         out = self.fc2(out)
         out = self.sigmoid(out)
@@ -261,13 +257,13 @@ class MultiLabelClassifier(nn.Module):
 
 # Model
 input_size = X_train.shape[1]
-hidden_size = 128
+hidden_size = 512
 output_size = y_train.shape[1]
 model = MultiLabelClassifier(input_size, hidden_size, output_size)
 
 # Loss function and optimizer
 criterion = nn.BCELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
 
 # Number of folds for cross-validation
 num_folds = 25
@@ -279,15 +275,16 @@ accuracies = []
 precisions = []
 recalls = []
 f1_scores = []
+threshold = 0.37
 for fold, (train_index, val_index) in enumerate(kf.split(X_train)):
-    print(f"Fold {fold+1}/{num_folds}")
+    # print(f"Fold {fold+1}/{num_folds}")
 
     X_train_fold, X_val_fold = X_train_tensor[train_index], X_train_tensor[val_index]
     y_train_fold, y_val_fold = y_train_tensor[train_index], y_train_tensor[val_index]
 
     # Training loop
     num_epochs = 100
-    batch_size = 32
+    batch_size = 3
     for epoch in range(num_epochs):
         for i in range(0, X_train_fold.size(0), batch_size):
             inputs = X_train_fold[i:i+batch_size]
@@ -305,10 +302,10 @@ for fold, (train_index, val_index) in enumerate(kf.split(X_train)):
     # Evaluate on validation set
     with torch.no_grad():
         val_outputs = model(X_val_fold)
-        val_predictions = (val_outputs > 0.5).numpy().astype(int)
+        val_predictions = (val_outputs > threshold).numpy().astype(int)
         val_accuracy = (val_predictions == y_val_fold.numpy()).mean()
         accuracies.append(val_accuracy)
-        print(f"Validation Accuracy: {val_accuracy}")
+        # print(f"Validation Accuracy: {val_accuracy}")
     
     val_predictions = val_predictions.astype(int)
     y_val_fold_numpy = y_val_fold.numpy().astype(int)
@@ -332,6 +329,7 @@ average_precision = sum(precisions) / num_folds
 average_recall = sum(recalls) / num_folds
 average_f1 = sum(f1_scores) / num_folds
 
+print(f"Threshold : {threshold}")
 print(f"Average Accuracy: {average_accuracy}")
 print(f"Average Precision: {average_precision}")
 print(f"Average Recall: {average_recall}")
