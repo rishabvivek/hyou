@@ -229,7 +229,6 @@ filename = "tracks_lyrics.csv"
 #     data["preprocessed_lyrics"] = " ".join(normalized_tokens)
 
 
-emotions = ["calm", "energetic", "love", "sad", "happy"]
 
 test_data = pd.read_csv('test_set.csv')
 train_data = pd.read_csv('training_set.csv')
@@ -260,18 +259,18 @@ class MultiLabelClassifier(nn.Module):
         out = self.sigmoid(out)
         return out
 
-# Define the model
+# Model
 input_size = X_train.shape[1]
 hidden_size = 128
 output_size = y_train.shape[1]
 model = MultiLabelClassifier(input_size, hidden_size, output_size)
 
-# Define the loss function and optimizer
+# Loss function and optimizer
 criterion = nn.BCELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-# Define the number of folds for cross-validation
-num_folds = 50
+# Number of folds for cross-validation
+num_folds = 25
 
 # Perform k-fold cross-validation
 kf = KFold(n_splits=num_folds, shuffle=True)
@@ -283,7 +282,6 @@ f1_scores = []
 for fold, (train_index, val_index) in enumerate(kf.split(X_train)):
     print(f"Fold {fold+1}/{num_folds}")
 
-    # Split the data into training and validation sets
     X_train_fold, X_val_fold = X_train_tensor[train_index], X_train_tensor[val_index]
     y_train_fold, y_val_fold = y_train_tensor[train_index], y_train_tensor[val_index]
 
@@ -299,23 +297,23 @@ for fold, (train_index, val_index) in enumerate(kf.split(X_train)):
             outputs = model(inputs)
             loss = criterion(outputs, labels)
 
-            # Backward and optimize
+            # Backward pass
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-    # Evaluate on the validation set
+    # Evaluate on validation set
     with torch.no_grad():
         val_outputs = model(X_val_fold)
         val_predictions = (val_outputs > 0.5).numpy().astype(int)
-        val_accuracy = (val_predictions == y_val_fold.numpy()).mean()
+        val_accuracy = (val_predictions == cd .y_val_fold.numpy()).mean()
         accuracies.append(val_accuracy)
         print(f"Validation Accuracy: {val_accuracy}")
     
     val_predictions = val_predictions.astype(int)
     y_val_fold_numpy = y_val_fold.numpy().astype(int)
 
-    # Calculate precision, recall, and F1 score
+    # Precision, recall, and F1 score
     precision = precision_score(y_val_fold_numpy, val_predictions, average='micro')
     recall = recall_score(y_val_fold_numpy, val_predictions, average='micro')
     f1 = f1_score(y_val_fold_numpy, val_predictions, average='micro')
@@ -328,7 +326,7 @@ for fold, (train_index, val_index) in enumerate(kf.split(X_train)):
     # print(f"Recall: {recall}")
     # print(f"F1 Score: {f1}")
 
-# Calculate the average accuracy, precision, recall, and F1 score
+# Average accuracy, precision, recall, and F1 score
 average_accuracy = sum(accuracies) / num_folds
 average_precision = sum(precisions) / num_folds
 average_recall = sum(recalls) / num_folds
