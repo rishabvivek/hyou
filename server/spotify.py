@@ -306,7 +306,7 @@ for fold, (train_index, val_index) in enumerate(kf.split(X_train)):
     with torch.no_grad():
         val_outputs = model(X_val_fold)
         val_predictions = (val_outputs > 0.5).numpy().astype(int)
-        val_accuracy = (val_predictions == cd .y_val_fold.numpy()).mean()
+        val_accuracy = (val_predictions == y_val_fold.numpy()).mean()
         accuracies.append(val_accuracy)
         print(f"Validation Accuracy: {val_accuracy}")
     
