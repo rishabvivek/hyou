@@ -14,6 +14,7 @@ import numpy as np
 import csv
 import sys
 import pandas as pd
+from flask import Flask, request, jsonify
 csv.field_size_limit(sys.maxsize)
 
 
@@ -358,6 +359,8 @@ api_headers = {
 
 scaler = MinMaxScaler()
 scaler.fit([data_min, data_max]) 
+
+
 def preprocess_song(track_name):
 
    
@@ -430,6 +433,20 @@ def predict(model, track_name, top_k = 2):
 model = torch.load("trained_model.pth")
 model.eval()
 
-predicted_label = predict(model, 'STAY', top_k=2)
+app = Flask(__name__)
 
-print(f"Emotion: {predicted_label}")
+@app.route('/predict-emotion', methods=['POST'])
+def post_call():
+    data = request.get_json()
+    track_name = data['track_name']
+
+    predicted_labels = predict(model, track_name, 2)
+
+    resp = {'emotion': predicted_labels}
+
+    return jsonify(resp)
+
+
+
+if __name__ == '__main__':
+    app.run()
