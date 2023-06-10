@@ -412,7 +412,7 @@ def preprocess_song(track_name):
 emotion_list = ['happiness', 'sadness', 'love', 'calm', 'energetic']
 def predict(model, track_name, top_k = 2):
     data = preprocess_song(track_name)
-    print(data)
+    # print(data)
     input_data = torch.tensor([data[feature] for feature in feature_list])
 
     # Convert input_data to the same data type as the model's weights
@@ -444,7 +444,7 @@ def post_call():
 
     resp = {'emotion': predicted_labels}
 
-    return jsonify(resp)
+    return jsonify(resp), 200
 
 
 
