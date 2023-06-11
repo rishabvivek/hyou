@@ -1,11 +1,28 @@
-.animate-gradient {
-  background-size: 300%;
-  -webkit-animation: animatedgradient 6s ease infinite alternate;
-  -moz-animation: animatedgradient 6s ease infinite alternate;
-  animation: animatedgradient 6s ease infinite alternate;
+
+
+.fade-in {
+  opacity: 1;
+  transition: opacity 1s ease-in;
 }
 
-@keyframes animatedgradient {
+.fade-out {
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+  pointer-events: none;
+}
+
+
+.gradient-container {
+  background: #242424;
+}
+
+.animate-gradient {
+  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+  background-size: 300%;
+  animation: animate-gradient 6s ease infinite alternate;
+}
+
+@keyframes animate-gradient {
   0% {
     background-position: 0% 50%;
   }

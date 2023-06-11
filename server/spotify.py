@@ -15,6 +15,7 @@ import csv
 import sys
 import pandas as pd
 from flask import Flask, request, jsonify
+from flask_cors import CORS, cross_origin
 csv.field_size_limit(sys.maxsize)
 
 
@@ -45,7 +46,7 @@ data = {"grant_type": "client_credentials"}
 
 # Send the authentication request
 response = requests.post(url, headers=headers, data=data)
-
+access_token = ""
 if response.status_code == 200:
     json_res = response.json()
     access_token = json_res["access_token"]
@@ -368,50 +369,51 @@ def preprocess_song(track_name):
         results = sp.search(q=track_name, type="track", limit=1)
         if results["tracks"]["items"]:
             track_id = results["tracks"]["items"][0]["id"]
+            features_response = requests.get(
+        "https://api.spotify.com/v1/audio-features",
+        headers=api_headers,
+                params={"ids": track_id} 
+        )   
+
+        if features_response.status_code == 200:
+            features_info = features_response.json()
+            features = features_info.get("audio_features", [])
+            if len(features) > 0:
+                feature_values = {
+                    'acousticness': features[0]['acousticness'],
+                    'danceability': features[0]['danceability'],
+                    'tempo': features[0]['tempo'],
+                    'instrumentalness': features[0]['instrumentalness'],
+                    'energy': features[0]['energy'],
+                    'loudness': features[0]['loudness'],
+                    'valence': features[0]['valence']
+                }
+
+                # Scale the feature values using the scaler
+                scaled_feature_values = scaler.transform([list(feature_values.values())])[0]
+
+                res = {
+                    'track_name': track_name,
+                    **{
+                        key: scaled_feature_values[i]
+                        for i, key in enumerate(feature_values.keys())
+                    }
+                }
+
+                return res
+
         else:
             return (f"No track found for '{track_name}'")
     except Exception as e:
         return (f"Error occurred while searching for '{track_name}': {str(e)}")
     
-    features_response = requests.get(
-        "https://api.spotify.com/v1/audio-features",
-        headers=api_headers,
-                params={"ids": track_id} 
-    )
-
-    if features_response.status_code == 200:
-        features_info = features_response.json()
-        features = features_info.get("audio_features", [])
-        if len(features) > 0:
-            feature_values = {
-                'acousticness': features[0]['acousticness'],
-                'danceability': features[0]['danceability'],
-                'tempo': features[0]['tempo'],
-                'instrumentalness': features[0]['instrumentalness'],
-                'energy': features[0]['energy'],
-                'loudness': features[0]['loudness'],
-                'valence': features[0]['valence']
-            }
-
-            # Scale the feature values using the scaler
-            scaled_feature_values = scaler.transform([list(feature_values.values())])[0]
-
-            res = {
-                'track_name': track_name,
-                **{
-                    key: scaled_feature_values[i]
-                    for i, key in enumerate(feature_values.keys())
-                }
-            }
-
-            return res
-
-    return f"No features found for '{track_name}'"
 
 
 emotion_list = ['happiness', 'sadness', 'love', 'calm', 'energetic']
 def predict(model, track_name, top_k = 2):
     data = preprocess_song(track_name)
+    if isinstance(data, str):
+        return data  
     # print(data)
     input_data = torch.tensor([data[feature] for feature in feature_list])
 
@@ -434,18 +436,19 @@ model = torch.load("trained_model.pth")
 model.eval()
 
 app = Flask(__name__)
+CORS(app)
 
-@app.route('/predict-emotion', methods=['POST'])
+@app.route('/predict-emotion', methods=['GET'])
 def post_call():
-    data = request.get_json()
-    track_name = data['track_name']
+    
+    track_name = request.args.get('track_name')
+    if not track_name:
+        return jsonify({'error': 'No track_name provided'}), 400
 
     predicted_labels = predict(model, track_name, 2)
-
     resp = {'emotion': predicted_labels}
 
     return jsonify(resp), 200
-
 
 
 if __name__ == '__main__':
