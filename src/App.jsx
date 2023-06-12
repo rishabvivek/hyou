@@ -13,6 +13,8 @@ function App() {
   const [fade, setFade] = useState(false);
   const [fadeEmotions, setFadeEmotions] = useState(false);
   const [animateGradient, setAnimateGradient] = useState(false);
+  const [backgroundStyle, setBackgroundStyle] = useState('#242424');
+
 
 
   const handleSearch = async (e) => {
@@ -27,12 +29,15 @@ function App() {
       });
 
       console.log(response.data.emotion);
+      const emotionCombination = response.data.emotion.join('-');
+      const gradient = getGradientForCombination(emotionCombination);
+      
       setEmotions(response.data.emotion.join(' '));
-
       setShowResults(true);
       setShowSearch(false);
       setAnimateGradient(true);
-
+      setBackgroundStyle(gradient);
+    
     } catch (error) {
       console.log(error);
     }
@@ -51,6 +56,9 @@ function App() {
     return () => clearTimeout(timeout);
   }, []);
 
+
+
+
   const handleRefresh = () => {
     window.location.reload();
   };
@@ -59,9 +67,46 @@ function App() {
     setFade(false);
   };
 
+  const getGradientForCombination = (combination) => {
+    const gradients = {
+      'happiness-sadness': 'linear-gradient(-45deg, #FFFA00, #0065FF)', 
+      'happiness-calm': 'linear-gradient(-45deg, #FFFA00, #00FF71)',
+      'happiness-love': 'linear-gradient(-45deg, #FFFA00, #F100FF)', 
+      'happiness-energetic': 'linear-gradient(-45deg, #FFFA00, #FF8200)', 
+      'sadness-calm': 'linear-gradient(-45deg, #0065FF, #00FF71)',
+      'sadness-love': 'linear-gradient(-45deg, #0065FF, #F100FF)',
+      'sadness-happiness': 'linear-gradient(-45deg, #0065FF, #FFFA00)',
+      'sadness-energetic': 'linear-gradient(-45deg, #0065FF, #FF8200)',
+      'calm-happiness': 'linear-gradient(-45deg, #00FF71, #FFFA00)',
+      'calm-sadness': 'linear-gradient(-45deg, #00FF71, #0065FF)',  
+      'calm-love': 'linear-gradient(-45deg, #00FF71, #FF8200)',  
+      'calm-energetic': 'linear-gradient(-45deg, #00FF71, #FF8200)',
+      'love-happiness': 'linear-gradient(-45deg, #F100FF, #FFFA00)',
+      'love-sadness': 'linear-gradient(-45deg, #F100FF, #0065FF)',
+      'love-calm': 'linear-gradient(-45deg, #F100FF, #00FF71)',
+      'love-energetic': 'linear-gradient(-45deg, #F100FF, #FF8200)',
+      'energetic-happiness': 'linear-gradient(-45deg, #FF8200, #FFFA00)',
+      'energetic-sadness': 'linear-gradient(-45deg, #FF8200, #0065FF)',
+      'energetic-love': 'linear-gradient(-45deg, #FF8200, #F100FF)',
+      'energetic-calm': 'linear-gradient(-45deg, #FF8200, #00FF71)',               
+
+    };
+
+    return gradients[combination] ||  'linear-gradient(-45deg, #242424, #242424)';
+  };
+
+
   return (
-    <div className={`gradient-container ${animateGradient ? 'animate-gradient' : ''}`}>
-      <div className="flex rounded-sm justify-center items-center">
+<div
+  className={`${animateGradient ? 'animate-gradient' : 'gradient-container'}`}
+  style={{
+    ...(animateGradient && {
+      background: backgroundStyle,
+      animation: 'animate-gradient 6s ease infinite alternate',
+      backgroundSize: '300%',
+    }),
+  }}
+>      <div className="flex rounded-sm justify-center items-center">
         <Navbar className='flex justify-center items-center' maxWidth='full' classNames={{
           wrapper: "bg-[#242424]"
         }} position="sticky">

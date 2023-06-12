@@ -1,5 +1,4 @@
 
-
 .fade-in {
   opacity: 1;
   transition: opacity 1s ease-in;
@@ -17,8 +16,6 @@
 }
 
 .animate-gradient {
-  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-  background-size: 300%;
   animation: animate-gradient 6s ease infinite alternate;
 }
 
